@@ -1,355 +1,378 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  X,
+  Upload,
+  FileText,
+  Calendar,
+  CheckCircle2,
+  Trash2,
+  RefreshCw,
+  ShieldCheck,
+  Check
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../../context/AuthContext';
 import { useApplications } from '../../context/ApplicationContext';
 import './ApplicationModal.css';
 
+const SALARY_OPTIONS = [
+  '₹3L - ₹5L',
+  '₹5L - ₹8L',
+  '₹8L - ₹12L',
+  '₹12L - ₹20L',
+  '₹20L - ₹35L',
+  '₹35L+'
+];
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const ACCEPTED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
+
 const ApplicationModal = ({ isOpen, onClose, job }) => {
   const { currentUser } = useAuth();
-  const { applyToJob, loading } = useApplications();
+  const { applyToJob } = useApplications();
   const fileInputRef = useRef(null);
-  
-  const [formData, setFormData] = useState({
-    coverLetter: '',
-    expectedSalary: '',
-    availableStartDate: '',
-    resumeFile: null,
-    linkedinProfile: '',
-    portfolioUrl: '',
-    whyInterested: ''
-  });
-  const [dragActive, setDragActive] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [uploadError, setUploadError] = useState('');
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const [coverLetter, setCoverLetter] = useState('');
+  const [expectedSalary, setExpectedSalary] = useState('');
+  const [availableFrom, setAvailableFrom] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [fileSize, setFileSize] = useState('');
+  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeData, setResumeData] = useState('');
+  const [uploadStatus, setUploadStatus] = useState('idle'); // idle | selected | uploaded
+  const [submitting, setSubmitting] = useState(false);
 
-  // Test function for debugging
-  const testFileInput = () => {
-    console.log('File input ref:', fileInputRef.current);
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-      console.log('File input clicked');
-    } else {
-      console.log('File input ref is null');
+  // Reset form when modal opens or closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCoverLetter('');
+      setExpectedSalary('');
+      setAvailableFrom('');
+      setFileName('');
+      setFileSize('');
+      setResumeFile(null);
+      setResumeData('');
+      setUploadStatus('idle');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  };
+  }, [isOpen]);
 
-  // Improved file upload handler
-  const handleFileUpload = (file) => {
-    setUploadError('');
-    
-    if (!file) {
-      setUploadError('No file selected');
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate extension
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+      toast.error('Invalid file format. Please upload PDF, DOC, or DOCX.', { duration: 4000 });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // Check file type
-    if (file.type !== 'application/pdf') {
-      setUploadError('Please upload a PDF file only');
+    // Validate size limit (5MB)
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File size exceeds the 5MB limit. Please upload a smaller file.', { duration: 4000 });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // Check file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-    if (file.size > maxSize) {
-      setUploadError('File size must be less than 5MB');
-      return;
-    }
+    // Format file size
+    const kb = (file.size / 1024).toFixed(1);
+    const sizeDisplay = file.size > 1048576 ? `${(file.size / 1048576).toFixed(1)} MB` : `${kb} KB`;
 
-    // File is valid
-    setFormData(prev => ({ ...prev, resumeFile: file }));
-    console.log('File uploaded successfully:', file.name);
+    setFileName(file.name);
+    setFileSize(sizeDisplay);
+    setResumeFile(file);
+
+    // Read full raw file data as base64 for persistent preview fidelity
+    const reader = new FileReader();
+    reader.onload = (uploadEvt) => {
+      setResumeData(uploadEvt.target.result);
+    };
+    reader.readAsDataURL(file);
+
+    setUploadStatus('uploaded');
   };
 
-  // Drag and drop handlers
-  const handleDragOver = (e) => {
-    e.preventDefault();
+  const handleRemoveResume = (e) => {
     e.stopPropagation();
-    setDragActive(true);
+    setFileName('');
+    setFileSize('');
+    setResumeFile(null);
+    setResumeData('');
+    setUploadStatus('idle');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    toast.info('Resume removed');
   };
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    const files = e.dataTransfer.files;
-    if (files && files[0]) {
-      handleFileUpload(files[0]);
-    }
-  };
-
-  // File input change handler
-  const handleFileInputChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      handleFileUpload(file);
-    }
-  };
-
-  // Click handler for upload area
-  const handleUploadAreaClick = (e) => {
-    e.preventDefault();
+  const handleReplaceResume = (e) => {
     e.stopPropagation();
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Remove file handler
-  const handleRemoveFile = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFormData(prev => ({ ...prev, resumeFile: null }));
-    setUploadError('');
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const validateForm = () => {
-    if (!formData.coverLetter.trim()) {
-      alert('Please write a cover letter');
-      return false;
-    }
-    if (!formData.resumeFile) {
-      alert('Please upload your resume');
-      return false;
-    }
-    if (!formData.expectedSalary) {
-      alert('Please provide your expected salary');
-      return false;
-    }
-    return true;
+  const handleSalaryClick = (range) => {
+    // Toggle selection
+    setExpectedSalary(prev => prev === range ? '' : range);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
-    if (!currentUser) {
-      alert('Please log in to apply for jobs');
+
+    // Enforce required Resume / CV validation
+    if (!fileName) {
+      toast.error('Please upload your Resume / CV before submitting.', { duration: 4000 });
       return;
     }
 
+    // If job requires a cover letter specifically, validate it
+    if (job.coverLetterRequired && !coverLetter.trim()) {
+      toast.error('This employer requires a cover letter with your application.', { duration: 4000 });
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      const applicationData = {
-        ...formData,
-        userEmail: currentUser.email,
-        userName: currentUser.name,
-        jobTitle: job.title,
-        companyName: job.company,
-        resumeFileName: formData.resumeFile?.name || 'resume.pdf'
-      };
+      await applyToJob(job, {
+        coverLetter: coverLetter.trim(),
+        expectedSalary: expectedSalary || 'Not specified',
+        availableFrom: availableFrom || 'Immediate',
+        resumeFileName: fileName,
+        resumeFileSize: fileSize || '1.2 MB',
+        resumeFile,
+        resumeData,
+      });
 
-      await applyToJob(job.id, applicationData);
-      setSubmitSuccess(true);
-      
-      setTimeout(() => {
-        onClose();
-        setSubmitSuccess(false);
-        resetForm();
-      }, 2000);
-      
-    } catch (error) {
-      alert('Error submitting application. Please try again.');
+      toast.success(`Application submitted for ${job.title}! 🎉`, {
+        description: `Your profile and resume were shared with ${job.company}.`,
+        duration: 4000,
+      });
+      onClose();
+    } catch (err) {
+      toast.error(err.message || 'Submission failed. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      coverLetter: '',
-      expectedSalary: '',
-      availableStartDate: '',
-      resumeFile: null,
-      linkedinProfile: '',
-      portfolioUrl: '',
-      whyInterested: ''
-    });
-    setUploadError('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  const maxChars = 500;
+  const remaining = maxChars - coverLetter.length;
 
-  if (!isOpen || !job) return null;
+  if (!job) return null;
 
-  if (submitSuccess) {
-    return (
-      <div className="application-modal-overlay">
-        <div className="application-modal success-modal">
-          <div className="success-content">
-            <div className="success-icon">🎉</div>
-            <h2>Application Submitted!</h2>
-            <p>Your application for <strong>{job.title}</strong> at <strong>{job.company}</strong> has been successfully submitted.</p>
-            <div className="success-details">
-              <span>✅ Resume uploaded: {formData.resumeFile?.name}</span>
-              <span>✅ Cover letter included</span>
-              <span>✅ Application tracking enabled</span>
-            </div>
-            <p className="success-note">We'll notify you about any updates on your application status.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const applicantName = currentUser?.name || 'Omkar Thorat';
+  const applicantEmail = currentUser?.email || 'omkar@example.com';
+  const applicantInitial = applicantName.charAt(0).toUpperCase();
 
   return (
-    <div className="application-modal-overlay" onClick={onClose}>
-      <div className="application-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="application-modal-header">
-          <h2>📄 Apply for {job.title}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
-        </div>
-
-
-        <div className="job-summary">
-          <div className="company-logo-small">{job.company.charAt(0)}</div>
-          <div className="job-info">
-            <h3>{job.title}</h3>
-            <p>{job.company} • {job.location}</p>
-            <span className="salary-badge">{job.salary}</span>
-          </div>
-        </div>
-
-        <form className="application-form" onSubmit={handleSubmit}>
-          {/* Resume upload section */}
-          <div className="form-section">
-            <h4>📎 Upload Resume (Required)</h4>
-            
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              onChange={handleFileInputChange}
-              style={{ display: 'none' }}
-            />
-            
-            {/* Upload area */}
-            <div 
-              className={`file-upload-area ${dragActive ? 'drag-active' : ''} ${formData.resumeFile ? 'has-file' : ''}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={handleUploadAreaClick}
-            >
-              {formData.resumeFile ? (
-                <div className="file-info">
-                  <div className="file-icon">📄</div>
-                  <div className="file-details">
-                    <p className="file-name">{formData.resumeFile.name}</p>
-                    <p className="file-size">
-                      {(formData.resumeFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <button 
-                    type="button" 
-                    className="remove-file"
-                    onClick={handleRemoveFile}
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <div className="upload-placeholder">
-                  <div className="upload-icon">📁</div>
-                  <p><strong>Click to upload</strong> or drag and drop your resume</p>
-                  <p className="upload-hint">PDF format only, max 5MB</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Error message */}
-            {uploadError && (
-              <div className="upload-error">
-                ⚠️ {uploadError}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="app-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={e => e.target === e.currentTarget && onClose()}
+        >
+          <motion.div
+            className="app-modal"
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+          >
+            {/* Modal Header */}
+            <div className="app-modal-header">
+              <div>
+                <h2>Apply for <span className="app-job-title">{job.title}</span></h2>
+                <p className="app-company">{job.company} · {job.location}</p>
               </div>
-            )}
-            
-            {/* Test upload button */}
-            <button 
-              type="button" 
-              className="test-upload-btn"
-              onClick={handleUploadAreaClick}
-            >
-              🔄 Browse Files
-            </button>
-          </div>
-
-          {/* Cover letter */}
-          <div className="form-section">
-            <h4>✍️ Cover Letter (Required)</h4>
-            <textarea
-              name="coverLetter"
-              value={formData.coverLetter}
-              onChange={handleInputChange}
-              placeholder="Tell us why you're interested in this position and why you'd be a great fit..."
-              className="cover-letter-input"
-              rows="6"
-              required
-            />
-            <div className="character-count">
-              {formData.coverLetter.length}/500 characters
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>💰 Expected Salary</label>
-              <select
-                name="expectedSalary"
-                value={formData.expectedSalary}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="">Select range</option>
-                <option value="40000-60000">$40K - $60K</option>
-                <option value="60000-80000">$60K - $80K</option>
-                <option value="80000-100000">$80K - $100K</option>
-                <option value="100000-120000">$100K - $120K</option>
-                <option value="120000+">$120K+</option>
-                <option value="negotiable">Negotiable</option>
-              </select>
+              <button className="app-close" onClick={onClose} aria-label="Close modal">
+                <X size={18} />
+              </button>
             </div>
 
-            <div className="form-group">
-              <label>📅 Available Start Date</label>
+            {/* Applicant Identity Line */}
+            <div className="app-identity-strip">
+              <div className="identity-avatar">{applicantInitial}</div>
+              <div className="identity-details">
+                <div className="identity-row">
+                  <span className="identity-prefix">Applying as</span>
+                  <span className="identity-name">{applicantName}</span>
+                </div>
+                <div className="identity-email">{applicantEmail}</div>
+              </div>
+              <div className="identity-badge">
+                <ShieldCheck size={13} />
+                <span>Profile info shared</span>
+              </div>
+            </div>
+
+            <form className="app-form" onSubmit={handleSubmit}>
+              {/* Hidden file input */}
               <input
-                type="date"
-                name="availableStartDate"
-                value={formData.availableStartDate}
-                onChange={handleInputChange}
-                min={new Date().toISOString().split('T')[0]}
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
               />
-            </div>
-          </div>
 
-          <div className="form-actions">
-            <button type="button" className="cancel-btn" onClick={onClose}>
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className={`submit-btn ${loading ? 'loading' : ''}`}
-              disabled={loading}
-            >
-              {loading ? '🔄 Submitting Application...' : '🚀 Submit Application'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              {/* 1. Resume / CV Section */}
+              <div className="app-field">
+                <div className="field-label-row">
+                  <label>Resume / CV <span className="required">*</span></label>
+                  <span className="field-hint">PDF, DOC, DOCX · Max 5MB</span>
+                </div>
+
+                {!fileName ? (
+                  <div
+                    className="resume-upload-box"
+                    onClick={() => fileInputRef.current?.click()}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && fileInputRef.current?.click()}
+                  >
+                    <div className="upload-icon-circle">
+                      <Upload size={20} />
+                    </div>
+                    <div className="upload-copy">
+                      <span className="upload-main-text">Click to browse or drag resume here</span>
+                      <small className="upload-sub-text">Accepted formats: PDF, DOC, DOCX (up to 5 MB)</small>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="resume-attached-card">
+                    <div className="resume-file-icon">
+                      <FileText size={20} />
+                    </div>
+                    <div className="resume-file-meta">
+                      <div className="resume-file-name" title={fileName}>{fileName}</div>
+                      <div className="resume-file-sub">
+                        <span>{fileSize}</span>
+                        <span className="meta-bullet">•</span>
+                        <span className="upload-ready-tag">
+                          <CheckCircle2 size={12} />
+                          {uploadStatus === 'uploaded' ? 'Ready to submit' : 'File selected'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="resume-actions">
+                      <button
+                        type="button"
+                        className="resume-action-btn replace"
+                        onClick={handleReplaceResume}
+                        title="Replace resume file"
+                      >
+                        <RefreshCw size={13} />
+                        <span>Replace</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="resume-action-btn remove"
+                        onClick={handleRemoveResume}
+                        title="Remove resume"
+                      >
+                        <Trash2 size={13} />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Expected Annual Salary (₹ LPA) */}
+              <div className="app-field">
+                <div className="field-label-row">
+                  <label>Expected Annual Salary (₹ LPA)</label>
+                  <span className="optional-tag">Optional</span>
+                </div>
+                <div className="salary-options">
+                  {SALARY_OPTIONS.map(s => {
+                    const isSelected = expectedSalary === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`salary-chip ${isSelected ? 'active' : ''}`}
+                        onClick={() => handleSalaryClick(s)}
+                        aria-pressed={isSelected}
+                      >
+                        {isSelected && <Check size={12} className="chip-check" />}
+                        <span>{s}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Available to Join From */}
+              <div className="app-field">
+                <div className="field-label-row">
+                  <label>
+                    <Calendar size={14} className="label-icon" />
+                    Available to Join From
+                  </label>
+                  <span className="optional-tag">Optional</span>
+                </div>
+                <input
+                  type="date"
+                  className="app-input"
+                  value={availableFrom}
+                  onChange={e => setAvailableFrom(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  placeholder="Select joining date"
+                />
+              </div>
+
+              {/* 4. Cover Letter */}
+              <div className="app-field">
+                <div className="field-label-row">
+                  <label>
+                    Cover Letter {job.coverLetterRequired ? <span className="required">*</span> : null}
+                  </label>
+                  <span className="optional-tag">
+                    {job.coverLetterRequired ? 'Required by employer' : 'Optional'}
+                  </span>
+                </div>
+                <textarea
+                  className="app-textarea"
+                  placeholder="Share why you're a good fit for this role, key projects, or highlights..."
+                  value={coverLetter}
+                  onChange={e => setCoverLetter(e.target.value.slice(0, maxChars))}
+                  rows={4}
+                  required={Boolean(job.coverLetterRequired)}
+                />
+                <div className="field-footer-row">
+                  <span className="textarea-guidance">Keep it brief and focused on your relevant experience.</span>
+                  <div className={`char-count ${remaining < 50 ? 'warn' : ''}`}>
+                    {remaining} / {maxChars}
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Modal Footer */}
+              <div className="app-footer">
+                <button type="button" className="app-cancel-btn" onClick={onClose} disabled={submitting}>
+                  Cancel
+                </button>
+                <motion.button
+                  type="submit"
+                  className="app-submit-btn"
+                  disabled={submitting}
+                  whileHover={{ scale: submitting ? 1 : 1.02 }}
+                  whileTap={{ scale: submitting ? 1 : 0.98 }}
+                >
+                  {submitting ? 'Submitting Application...' : 'Submit Application'}
+                </motion.button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

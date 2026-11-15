@@ -1,0 +1,32 @@
+.browse-page-header {
+  background: linear-gradient(180deg, #090d16 0%, #0e1424 50%, #131a2e 100%);
+  padding: 60px 0 44px;
+  text-align: center;
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.browse-page-header h1 {
+  font-size: 2.6rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: -0.035em;
+  color: #ffffff !important;
+}
+
+.browse-page-header p {
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.88);
+  max-width: 520px;
+  margin: 0 auto;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 768px) {
+  .browse-page-header {
+    padding: 44px 0 32px;
+  }
+  .browse-page-header h1 {
+    font-size: 1.9rem;
+  }
+}

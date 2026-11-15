@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="jcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0071e3"/>
+      <stop offset="100%" stop-color="#5856d6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded Squircle Background -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#jcGradient)"/>
+  
+  <!-- Subtle Glass Highlight -->
+  <rect x="2.5" y="2.5" width="59" height="59" rx="15.5" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.28"/>
+
+  <!-- Briefcase Icon (Centered: 36x36 at (14,14)) -->
+  <g transform="translate(14, 14) scale(1.5)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="6" width="20" height="14" rx="2.2"/>
+    <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+  </g>
+</svg>

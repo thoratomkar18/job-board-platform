@@ -1,23 +1,19 @@
 import React from 'react';
-import Header from '../components/Header/Header';
+import Layout from '../components/Layout/Layout';
 import JobListings from '../components/JobListings/JobListings';
-import Footer from '../components/Footer/Footer';
+import './BrowseJobsPage.css';
 
 const BrowseJobsPage = () => {
   return (
-    <div className="browse-jobs-page">
-      <Header />
-      <div className="page-content">
-        <div className="page-header">
-          <div className="container">
-            <h1>Browse All Jobs</h1>
-            <p>Find your perfect job from thousands of opportunities</p>
-          </div>
+    <Layout>
+      <div className="browse-page-header">
+        <div className="container">
+          <h1>Browse All Jobs</h1>
+          <p>Find your perfect job from thousands of opportunities across India</p>
         </div>
-        <JobListings />
       </div>
-      <Footer />
-    </div>
+      <JobListings />
+    </Layout>
   );
 };
 

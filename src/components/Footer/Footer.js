@@ -1,108 +1,239 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Briefcase, Mail, ArrowRight, Send, Loader2, Globe } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
+import { usePlatformStats } from '../../context/ApplicationContext';
+import { newsletterApi } from '../../api/newsletterApi';
 import './Footer.css';
 
 const Footer = () => {
-  // I added current year automatically - learned this trick
-  const currentYear = new Date().getFullYear();
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { currentUser } = useAuth();
+  const stats = usePlatformStats();
+  const navigate = useNavigate();
+  const year = new Date().getFullYear();
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    const trimmed = (email || '').trim();
+
+    if (!trimmed) {
+      toast.error('Please enter an email address.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      toast.error('Invalid email format. Please enter a valid email address.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await newsletterApi.subscribe(trimmed);
+      toast.success(res?.message || 'Thank you for subscribing! Real updates on new jobs will be delivered to your inbox.');
+      setEmail('');
+    } catch (err) {
+      toast.error(err.message || 'Unable to subscribe. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleJobSeekerProtectedNav = (path) => (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      toast.info('Please log in as a Job Seeker to access this page.');
+      navigate(`/login?redirect=${encodeURIComponent(path)}`);
+      return;
+    }
+    if (currentUser.role !== 'job_seeker') {
+      toast.error(`This section is only for Job Seekers. You are currently logged in as ${currentUser.role}.`);
+      return;
+    }
+    navigate(path);
+  };
+
+  const handleEmployerProtectedNav = (path) => (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      toast.info('Please log in as an Employer to access recruitment tools.');
+      navigate(`/login?redirect=${encodeURIComponent(path)}`);
+      return;
+    }
+    if (currentUser.role !== 'employer') {
+      toast.error(`This section is reserved for Employers. You are currently logged in as ${currentUser.role}.`);
+      return;
+    }
+    navigate(path);
+  };
 
   return (
     <footer className="main-footer">
       <div className="footer-container">
-        {/* Footer main content */}
         <div className="footer-content">
-          {/* Company info section */}
-          <div className="footer-section company-info">
-            <div className="footer-logo">
-              <div className="logo-icon">🔍</div>
-              <div className="logo-text">
-                <h3>JobConnect</h3>
-                <p>Find your dream job</p>
+          {/* Brand Column */}
+          <div className="footer-section brand-section">
+            <Link to="/" className="footer-logo">
+              <div className="footer-logo-icon">
+                <Briefcase size={18} color="white" />
               </div>
-            </div>
-            <p className="company-description">
-              We connect talented professionals with amazing career opportunities. 
-              Your next job is just a click away!
+              <span className="footer-brand-name">JobConnect India</span>
+            </Link>
+            <p className="footer-tagline">
+              Connecting India's talent with India's opportunities. Naukri dhundo, sapna jiyo! 🇮🇳
             </p>
-            <div className="social-links">
-              <a href="#" className="social-link">📘 Facebook</a>
-              <a href="#" className="social-link">🐦 Twitter</a>
-              <a href="#" className="social-link">💼 LinkedIn</a>
-              <a href="#" className="social-link">📷 Instagram</a>
+            <div className="footer-contact-info">
+              <a href="mailto:support@jobconnect.in" className="contact-row" title="Official Support Desk">
+                <Mail size={14} /> support@jobconnect.in
+              </a>
+              <Link to="/contact" className="contact-row" title="Contact & Help Center">
+                <Globe size={14} /> Help & Contact Center
+              </Link>
             </div>
           </div>
 
-          {/* Quick links section */}
+          {/* For Job Seekers */}
           <div className="footer-section">
             <h4>For Job Seekers</h4>
             <ul className="footer-links">
-              <li><a href="/browse-jobs">Browse Jobs</a></li>
-              <li><a href="/job-alerts">Job Alerts</a></li>
-              <li><a href="/resume-builder">Resume Builder</a></li>
-              <li><a href="/career-advice">Career Advice</a></li>
-              <li><a href="/salary-guide">Salary Guide</a></li>
+              <li>
+                <Link to="/browse" className="footer-link">
+                  <ArrowRight size={13} /> Browse Jobs
+                </Link>
+              </li>
+              <li>
+                <a
+                  href="/dashboard?tab=applications"
+                  onClick={handleJobSeekerProtectedNav('/dashboard?tab=applications')}
+                  className="footer-link"
+                >
+                  <ArrowRight size={13} /> My Applications
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/dashboard?tab=saved"
+                  onClick={handleJobSeekerProtectedNav('/dashboard?tab=saved')}
+                  className="footer-link"
+                >
+                  <ArrowRight size={13} /> Saved Jobs
+                </a>
+              </li>
+              <li>
+                <Link to="/about" className="footer-link">
+                  <ArrowRight size={13} /> Career Advice
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Employer links section */}
+          {/* For Employers */}
           <div className="footer-section">
             <h4>For Employers</h4>
             <ul className="footer-links">
-              <li><a href="/post-job">Post a Job</a></li>
-              <li><a href="/search-candidates">Search Candidates</a></li>
-              <li><a href="/pricing">Pricing Plans</a></li>
-              <li><a href="/employer-resources">Resources</a></li>
-              <li><a href="/contact-sales">Contact Sales</a></li>
+              <li>
+                <a
+                  href="/employer-dashboard?tab=post-job"
+                  onClick={handleEmployerProtectedNav('/employer-dashboard?tab=post-job')}
+                  className="footer-link"
+                >
+                  <ArrowRight size={13} /> Post a Job
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/employer-dashboard?tab=my-jobs"
+                  onClick={handleEmployerProtectedNav('/employer-dashboard?tab=my-jobs')}
+                  className="footer-link"
+                >
+                  <ArrowRight size={13} /> My Jobs
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/employer-dashboard?tab=candidates"
+                  onClick={handleEmployerProtectedNav('/employer-dashboard?tab=candidates')}
+                  className="footer-link"
+                >
+                  <ArrowRight size={13} /> View Candidates
+                </a>
+              </li>
+              <li>
+                <Link to="/login?tab=register&role=employer" className="footer-link">
+                  <ArrowRight size={13} /> Register as Employer
+                </Link>
+              </li>
             </ul>
-          </div>
 
-          {/* Company links section */}
-          <div className="footer-section">
-            <h4>Company</h4>
+            <h4 style={{ marginTop: '24px' }}>Company</h4>
             <ul className="footer-links">
-              <li><a href="/about">About Us</a></li>
-              <li><a href="/contact">Contact</a></li>
-              <li><a href="/careers">We're Hiring</a></li>
-              <li><a href="/press">Press & Media</a></li>
-              <li><a href="/help">Help Center</a></li>
+              <li>
+                <Link to="/about" className="footer-link">
+                  <ArrowRight size={13} /> About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="footer-link">
+                  <ArrowRight size={13} /> Contact
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Newsletter section */}
+          {/* Newsletter + Verified Statistics */}
           <div className="footer-section newsletter-section">
             <h4>Stay Updated</h4>
-            <p>Get the latest jobs and career tips delivered to your inbox.</p>
-            <div className="newsletter-form">
-              <input 
-                type="email" 
-                placeholder="Enter your email"
+            <p className="newsletter-desc">Get verified job alerts and career updates in your inbox.</p>
+            <form className="newsletter-form" onSubmit={handleSubscribe}>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="your@email.com"
                 className="newsletter-input"
+                disabled={submitting}
+                aria-label="Newsletter email input"
               />
-              <button className="newsletter-btn">Subscribe</button>
-            </div>
-            <div className="job-stats">
-              <div className="stat">
-                <span className="stat-number">4,536+</span>
-                <span className="stat-label">Active Jobs</span>
+              <motion.button
+                type="submit"
+                className="newsletter-btn"
+                disabled={submitting}
+                whileHover={{ scale: submitting ? 1 : 1.05 }}
+                whileTap={{ scale: submitting ? 1 : 0.95 }}
+                title="Subscribe to Newsletter"
+              >
+                {submitting ? <Loader2 size={14} className="spin" /> : <Send size={14} />}
+              </motion.button>
+            </form>
+
+            {/* Verified Statistics Synchronized with Homepage */}
+            <div className="footer-stats">
+              <div className="footer-stat" title="Actual live active job openings">
+                <span className="stat-num">{stats.activeJobsCount}+</span>
+                <span className="stat-lbl">Active Jobs</span>
               </div>
-              <div className="stat">
-                <span className="stat-number">12,000+</span>
-                <span className="stat-label">Happy Candidates</span>
+              <div className="footer-stat" title="Registered candidate profiles">
+                <span className="stat-num">{stats.registeredCandidatesCount}+</span>
+                <span className="stat-lbl">Candidates</span>
+              </div>
+              <div className="footer-stat" title="Verified partner employers">
+                <span className="stat-num">{stats.verifiedCompaniesCount}+</span>
+                <span className="stat-lbl">Companies</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer bottom section */}
+        {/* Bottom Section */}
         <div className="footer-bottom">
-          <div className="footer-bottom-content">
-            <p className="copyright">
-              © {currentYear} JobConnect. All rights reserved. Built with ❤️ by Omkar Thorat
-            </p>
-            <div className="footer-legal">
-              <a href="/privacy">Privacy Policy</a>
-              <a href="/terms">Terms of Service</a>
-              <a href="/cookies">Cookie Policy</a>
-            </div>
+          <p>© {year} JobConnect India. All rights reserved.</p>
+          <div className="footer-legal">
+            <Link to="/about">Privacy Policy</Link>
+            <Link to="/about">Terms of Service</Link>
           </div>
         </div>
       </div>

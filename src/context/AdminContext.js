@@ -47,8 +47,8 @@ export const AdminProvider = ({ children }) => {
     }
   ]);
 
-  const [flaggedContent, setFlaggedContent] = useState([]);
-  const [systemHealth, setSystemHealth] = useState({
+  const [flaggedContent] = useState([]);
+  const [systemHealth] = useState({
     serverStatus: 'healthy',
     databaseStatus: 'healthy',
     apiResponseTime: 156, // ms

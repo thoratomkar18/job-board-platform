@@ -1,0 +1,13 @@
+[
+  {
+    "id": "sub_1793552398238",
+    "email": "test@example.com",
+    "subscribedAt": "2026-11-01T16:59:58.238Z",
+    "ip": "::1"
+  },
+  {
+    "id": "sub_1794760404344",
+    "email": "audit_1794760404336@test.in",
+    "subscribedAt": "2026-11-15T16:33:24.345Z"
+  }
+]

@@ -1,70 +1,70 @@
-# Getting Started with Create React App
+# JobConnect India
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-stack recruitment platform built with React, Express, MongoDB, and Socket.IO. It supports job discovery and applications, employer candidate pipelines, interview scheduling, scorecards, offer letters, and in-app notifications.
 
-## Available Scripts
+## Requirements
 
-In the project directory, you can run:
+- Node.js 18 or newer
+- MongoDB, either running locally on port 27017 or available through `MONGO_URI`
 
-### `npm start`
+## Local development
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Install frontend dependencies in the project root and backend dependencies in `server/`:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+npm install
+cd server
+npm install
+cd ..
+```
 
-### `npm test`
+Create `server/.env` as needed:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```env
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/jobconnect
+JWT_SECRET=replace-with-a-long-random-secret
+# Optional; omit to simulate email delivery in development.
+GMAIL_USER=your_email@gmail.com
+GMAIL_APP_PASSWORD=your_16_character_app_password
+EMAIL_FROM=JobConnect India <your_email@gmail.com>
+```
 
-### `npm run build`
+Set `REACT_APP_API_URL` in a root `.env` when the API is hosted somewhere other than `http://localhost:5000/api`.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Start MongoDB first. Then run the API and frontend in separate terminals:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+cd server
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+npm start
+```
 
-### `npm run eject`
+Alternatively, `npm run start:all` launches the API and frontend and attempts to start MongoDB when it is not already running. If `mongod` is not at the default Windows install location, set `MONGOD_PATH` to its executable path before running the launcher. The database files are stored under `server/data/db/` and are ignored by Git.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- Frontend: http://localhost:3000/job-board-platform
+- API health: http://localhost:5000/api/health
+- Default MongoDB URI: `mongodb://127.0.0.1:27017/jobconnect`
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Seed accounts
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+On an empty database, the backend seeds demo accounts. Change or remove these credentials before deploying with a shared or public database.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+| Role | Email | Password |
+|---|---|---|
+| Job seeker | `thorato384@gmail.com` | `password123` |
+| Employer | `priya@techcorp.in` | `employer123` |
+| Administrator | `admin@jobconnect.in` | `admin123` |
 
-## Learn More
+## Production configuration
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Set `JWT_SECRET` to a long, randomly generated secret in every production API and Socket.IO process. The server refuses to start in production if it is missing. Configure `MONGO_URI` for the production database, and set `REACT_APP_API_URL` to the deployed API URL when building the frontend. Never commit `.env` files or production credentials.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Project layout
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- `src/`: React app, pages, components, contexts, and API clients
+- `server/`: Express API, Mongoose models, routes, middleware, and Socket.IO services
+- `start-dev.js`: Local multi-service development launcher

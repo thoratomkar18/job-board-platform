@@ -1,159 +1,199 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
+import { io } from 'socket.io-client';
+import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
+import { notificationsApi } from '../api/notificationsApi';
 
 const NotificationContext = createContext();
-
-export const useNotifications = () => {
-  return useContext(NotificationContext);
-};
+export const useNotifications = () => useContext(NotificationContext);
 
 export const NotificationProvider = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, token } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [preferences, setPreferences] = useState({
+    emailNotifications: true,
+    applicationUpdates: true,
+    interviewUpdates: true,
+    jobAlerts: true,
+    messages: true,
+    marketingEmails: false,
+  });
 
-  // Load notifications from localStorage on mount
-  useEffect(() => {
-    if (currentUser) {
-      const savedNotifications = localStorage.getItem(`notifications_${currentUser.id}`);
-      if (savedNotifications) {
-        const parsed = JSON.parse(savedNotifications);
-        setNotifications(parsed);
-        setUnreadCount(parsed.filter(n => !n.read).length);
+  const socketRef = useRef(null);
+
+  // 1. Fetch persistent notifications from MongoDB API
+  const fetchNotifications = useCallback(async () => {
+    if (!currentUser) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await notificationsApi.getNotifications(1, 30);
+      if (res && res.success) {
+        setNotifications(res.data || []);
+        setUnreadCount(res.unreadCount || 0);
       }
+    } catch (err) {
+      console.warn('Could not fetch notifications from backend:', err.message);
+    } finally {
+      setLoading(false);
     }
   }, [currentUser]);
 
-  // Save notifications to localStorage when they change
+  // 2. Fetch Notification Preferences
+  const fetchPreferences = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const res = await notificationsApi.getPreferences();
+      if (res && res.success && res.data?.preferences) {
+        setPreferences(res.data.preferences);
+      }
+    } catch (err) {
+      console.warn('Could not fetch preferences:', err.message);
+    }
+  }, [currentUser]);
+
   useEffect(() => {
-    if (currentUser && notifications.length > 0) {
-      localStorage.setItem(`notifications_${currentUser.id}`, JSON.stringify(notifications));
-      setUnreadCount(notifications.filter(n => !n.read).length);
+    fetchNotifications();
+    fetchPreferences();
+  }, [fetchNotifications, fetchPreferences]);
+
+  // 3. Connect to Socket.IO with authenticated user handshake
+  useEffect(() => {
+    const activeToken = token || localStorage.getItem('jobconnect_token');
+    if (!currentUser || !activeToken) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      return;
     }
-  }, [notifications, currentUser]);
 
-  // Add new notification
-  const addNotification = (notification) => {
-    const newNotification = {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      read: false,
-      ...notification
-    };
+    const socketUrl = process.env.REACT_APP_API_URL
+      ? process.env.REACT_APP_API_URL.replace('/api', '')
+      : 'http://localhost:5000';
 
-    setNotifications(prev => [newNotification, ...prev]);
-    
-    // Show browser notification if permission granted
-    if (Notification.permission === 'granted') {
-      new Notification(notification.title, {
-        body: notification.message,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico'
+    const socket = io(socketUrl, {
+      auth: { token: activeToken },
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    socket.on('connect', () => {
+      console.log('⚡ [Socket.IO] Connected to notification stream:', socket.id);
+    });
+
+    // Handle new targeted notification
+    socket.on('notification:new', (payload) => {
+      console.log('🔔 [Socket.IO] New notification received:', payload);
+      const newNotif = payload.notification || payload;
+
+      setNotifications((prev) => [
+        {
+          ...newNotif,
+          id: String(newNotif._id || newNotif.id || Date.now()),
+        },
+        ...prev.filter(n => String(n._id || n.id) !== String(newNotif._id || newNotif.id)),
+      ]);
+
+      if (typeof payload.unreadCount === 'number') {
+        setUnreadCount(payload.unreadCount);
+      } else {
+        setUnreadCount((c) => c + 1);
+      }
+
+      // Display real-time Toast notification to user
+      toast.info(newNotif.title, {
+        description: newNotif.message,
+        duration: 5000,
       });
-    }
+    });
 
-    return newNotification.id;
-  };
+    // Handle broadcast notifications (e.g. new job matches)
+    socket.on('notification:broadcast', (payload) => {
+      console.log('📢 [Socket.IO] Broadcast event:', payload);
+      toast.info(payload.title, {
+        description: payload.message,
+        duration: 5000,
+      });
+      fetchNotifications();
+    });
 
-  // Mark notification as read
-  const markAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, read: true }
-          : notification
+    socket.on('connect_error', (err) => {
+      console.warn('Socket connection warning:', err.message);
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [currentUser, token, fetchNotifications]);
+
+  // 4. Mark single notification as read
+  const markAsRead = useCallback(async (notifId) => {
+    // Optimistic UI update
+    setNotifications((prev) =>
+      prev.map((n) =>
+        String(n._id || n.id) === String(notifId) ? { ...n, read: true } : n
       )
     );
-  };
+    setUnreadCount((c) => Math.max(0, c - 1));
 
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
-  };
-
-  // Delete notification
-  const deleteNotification = (notificationId) => {
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== notificationId)
-    );
-  };
-
-  // Clear all notifications
-  const clearAllNotifications = () => {
-    setNotifications([]);
-  };
-
-  // Get notifications by type
-  const getNotificationsByType = (type) => {
-    return notifications.filter(notification => notification.type === type);
-  };
-
-  // Request browser notification permission
-  const requestNotificationPermission = async () => {
-    if ('Notification' in window) {
-      const permission = await Notification.requestPermission();
-      return permission === 'granted';
+    try {
+      await notificationsApi.markAsRead(notifId);
+    } catch (err) {
+      console.warn('Failed to mark notification as read on backend:', err.message);
     }
-    return false;
-  };
+  }, []);
 
-  // Simulate real-time notifications (in real app, this would come from WebSocket/Server-Sent Events)
-  useEffect(() => {
-    if (!currentUser) return;
+  // 5. Mark all as read
+  const markAllAsRead = useCallback(async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
 
-    const simulateNotifications = () => {
-      const notificationTypes = [
-        {
-          type: 'application_update',
-          title: 'Application Update',
-          message: 'Your application for Frontend Developer has been reviewed',
-          actionUrl: '/dashboard?tab=applications',
-          icon: '📋'
-        },
-        {
-          type: 'new_job_match',
-          title: 'New Job Match',
-          message: 'A new React Developer position matches your profile',
-          actionUrl: '/browse',
-          icon: '🎯'
-        },
-        {
-          type: 'interview_scheduled',
-          title: 'Interview Scheduled',
-          message: 'Interview scheduled for Product Manager position',
-          actionUrl: '/dashboard?tab=applications',
-          icon: '📅'
-        }
-      ];
+    try {
+      await notificationsApi.markAllAsRead();
+      toast.success('All notifications marked as read.');
+    } catch (err) {
+      console.warn('Failed to mark all as read on backend:', err.message);
+    }
+  }, []);
 
-      // Randomly add notifications for demo purposes
-      if (Math.random() > 0.7) { // 30% chance every interval
-        const randomNotification = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
-        addNotification(randomNotification);
+  // 6. Update user notification preferences
+  const updatePreferences = useCallback(async (newPrefs) => {
+    try {
+      const res = await notificationsApi.updatePreferences(newPrefs);
+      if (res && res.success) {
+        setPreferences(res.data);
+        toast.success('Notification preferences updated!');
+        return true;
       }
-    };
-
-    // Simulate notifications every 30 seconds for demo
-    const interval = setInterval(simulateNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [currentUser]);
-
-  const value = {
-    notifications,
-    unreadCount,
-    addNotification,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    clearAllNotifications,
-    getNotificationsByType,
-    requestNotificationPermission
-  };
+    } catch (err) {
+      toast.error(err.message || 'Could not update preferences');
+      return false;
+    }
+  }, []);
 
   return (
-    <NotificationContext.Provider value={value}>
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        loading,
+        preferences,
+        fetchNotifications,
+        markAsRead,
+        markAllAsRead,
+        updatePreferences,
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );

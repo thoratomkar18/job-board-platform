@@ -1,0 +1,247 @@
+/* ==========================================================================
+   Resume Preview Modal - Embedded PDF Viewer Only
+   ========================================================================== */
+
+.rpm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.rpm-dialog {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 980px;
+  height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Header Bar */
+.rpm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.4rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.rpm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.rpm-file-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(0, 113, 227, 0.08);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rpm-file-icon {
+  color: var(--apple-blue, #0071e3);
+}
+
+.rpm-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rpm-filename {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary, #1d1d1f);
+  margin: 0;
+  max-width: 380px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.015em;
+}
+
+.rpm-badge-format {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--apple-blue, #0071e3);
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.5px;
+}
+
+.rpm-badge-size {
+  font-size: 0.78rem;
+  color: var(--text-muted, #86868b);
+  font-weight: 400;
+}
+
+.rpm-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #515154);
+  margin: 0.15rem 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rpm-subtitle strong {
+  color: var(--text-primary, #1d1d1f);
+}
+
+/* Actions */
+.rpm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.rpm-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.45rem 0.95rem;
+  border-radius: var(--radius-pill, 980px);
+  cursor: pointer;
+  transition: all 140ms var(--ease-apple);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-primary, #1d1d1f);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rpm-action-btn:hover {
+    background: rgba(0, 0, 0, 0.07);
+    border-color: rgba(0, 0, 0, 0.2);
+  }
+}
+
+.rpm-action-btn:active {
+  transform: scale(0.97);
+}
+
+.rpm-download-btn {
+  background: var(--apple-blue, #0071e3);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rpm-download-btn:hover {
+    background: var(--apple-blue-hover, #0077ed);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 113, 227, 0.45);
+  }
+}
+
+.rpm-download-btn:active {
+  transform: scale(0.97);
+}
+
+.rpm-close-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rpm-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Body / Embedded PDF Container */
+.rpm-body {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 66px);
+  background: #525659;
+  overflow: hidden;
+  position: relative;
+}
+
+.rpm-pdf-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: #ffffff;
+}
+
+.rpm-loading-box,
+.rpm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: #f1f5f9;
+  text-align: center;
+  padding: 24px;
+}
+
+.rpm-loading-box p,
+.rpm-empty p {
+  color: #cbd5e1;
+  font-size: 14px;
+  margin: 0;
+}
+
+.rpm-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #2997ff;
+  border-radius: 50%;
+  animation: rpmSpin 0.8s linear infinite;
+}
+
+@keyframes rpmSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .rpm-dialog {
+    height: 94vh;
+  }
+  .rpm-filename {
+    max-width: 200px;
+  }
+}

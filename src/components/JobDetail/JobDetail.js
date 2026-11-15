@@ -182,25 +182,3 @@ const JobDetail = () => {
 };
 
 export default JobDetail;
-
-// In the useEffect where you load job data, add scroll after loading:
-useEffect(() => {
-  setTimeout(() => {
-    const jobDetails = {
-      // ... your job details
-    };
-    
-    const jobDetail = jobDetails[jobId];
-    setJob(jobDetail);
-    setLoading(false);
-    
-    // FIX: Scroll to top after content loads
-    setTimeout(() => {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    }, 100);
-    
-  }, 800);
-}, [jobId]);
