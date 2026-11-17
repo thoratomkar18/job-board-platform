@@ -86,10 +86,10 @@ const RoleSwitcher = () => {
         navigate(demoUser.targetRoute);
         setIsOpen(false);
       } else {
-        toast.error('Unable to switch account.');
+        toast.error(res?.message || 'Unable to switch account.');
       }
     } catch (err) {
-      toast.error('Failed to switch account.');
+      toast.error(err?.message || 'Failed to switch account.');
     }
   };
 

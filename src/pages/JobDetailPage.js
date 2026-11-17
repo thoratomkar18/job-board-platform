@@ -57,7 +57,7 @@ const normalizeJobDetails = (found) => {
     perks,
     about: found.about || `Posted by ${found.employerName || found.company || 'Enterprise Partner'}. Join our fast-growing engineering team in India.`,
     companySize: found.companySize || '50-200 employees',
-    companyWebsite: found.companyWebsite || 'https://cloudtech.in',
+    companyWebsite: found.companyWebsite || '',
     postedDate: found.postedDate || found.createdAt || new Date().toISOString(),
   };
 };

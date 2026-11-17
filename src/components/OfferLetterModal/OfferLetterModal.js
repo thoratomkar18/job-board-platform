@@ -24,7 +24,7 @@ const OfferLetterModal = ({
   const isPending = !offer.status || offer.status === 'pending';
   const isAccepted = offer.status === 'accepted' || application.status === 'hired';
 
-  const companyName = application.companyName || 'CloudTech India Pvt. Ltd.';
+  const companyName = application.companyName || 'Hiring Organization';
   const candidateName = application.applicantName || 'Candidate';
   const jobTitle = application.jobTitle || 'Software Engineer';
   const ctc = offer.ctc || application.salary || '₹22,00,000 / yr';

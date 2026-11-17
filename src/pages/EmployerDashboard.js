@@ -80,11 +80,11 @@ const ApplicationCard = ({
       const notifMap = {
         shortlisted: {
           title: '⭐ Application Shortlisted!',
-          message: `Great news! You have been shortlisted for ${app.jobTitle} at ${app.companyName || 'CloudTech India'}.`,
+          message: `Great news! You have been shortlisted for ${app.jobTitle} at ${app.companyName || currentUser?.company || 'the hiring company'}.`,
         },
         selected: {
           title: '🎉 Selected for the Role!',
-          message: `Congratulations! You have been selected for the position of ${app.jobTitle} at ${app.companyName || 'CloudTech India'}!`,
+          message: `Congratulations! You have been selected for the position of ${app.jobTitle} at ${app.companyName || currentUser?.company || 'the hiring company'}!`,
         },
         rejected: {
           title: 'Application Status Update',
@@ -448,8 +448,8 @@ const EmployerDashboard = () => {
   }, [searchParams]);
   const [newJob, setNewJob]       = useState({
     title: '', location: '', type: 'Full-time', salary: '',
-    company: currentUser?.company || 'CloudTech India Pvt. Ltd.',
-    companyWebsite: currentUser?.website || 'https://cloudtech.in',
+    company: currentUser?.company || '',
+    companyWebsite: currentUser?.companyWebsite || currentUser?.website || '',
     description: '', requirements: '', skills: '', experienceLevel: '3-5 yrs',
   });
   const [posting, setPosting]     = useState(false);
@@ -495,8 +495,8 @@ const EmployerDashboard = () => {
     await new Promise(r => setTimeout(r, 600));
     postJob({
       ...newJob,
-      company: newJob.company || currentUser?.company || 'CloudTech India Pvt. Ltd.',
-      companyWebsite: newJob.companyWebsite || currentUser?.website || 'https://cloudtech.in',
+      company: newJob.company || currentUser?.company || '',
+      companyWebsite: newJob.companyWebsite || currentUser?.companyWebsite || currentUser?.website || '',
     });
     if (pushNotification && currentUser?.id) {
       pushNotification(currentUser.id, {
@@ -508,8 +508,8 @@ const EmployerDashboard = () => {
     }
     setNewJob({
       title: '', location: '', type: 'Full-time', salary: '',
-      company: currentUser?.company || 'CloudTech India Pvt. Ltd.',
-      companyWebsite: currentUser?.website || 'https://cloudtech.in',
+      company: currentUser?.company || '',
+      companyWebsite: currentUser?.companyWebsite || currentUser?.website || '',
       description: '', requirements: '', skills: '', experienceLevel: '3-5 yrs',
     });
     setPosting(false);
@@ -946,11 +946,11 @@ const EmployerDashboard = () => {
                     <div className="ed-form-row">
                       <div className="ed-form-group">
                         <label>Company Name</label>
-                        <input value={newJob.company} onChange={set('company')} placeholder="e.g. CloudTech India Pvt. Ltd." />
+                        <input value={newJob.company} onChange={set('company')} placeholder="e.g. Acme Technologies" />
                       </div>
                       <div className="ed-form-group">
                         <label>Company Website</label>
-                        <input value={newJob.companyWebsite} onChange={set('companyWebsite')} placeholder="e.g. https://cloudtech.in" />
+                        <input value={newJob.companyWebsite} onChange={set('companyWebsite')} placeholder="e.g. https://yourcompany.com (optional)" />
                       </div>
                     </div>
                     <div className="ed-form-row">
@@ -1001,6 +1001,7 @@ const EmployerDashboard = () => {
                     <div className="ed-settings-row"><div><p className="ed-settings-lbl">Name</p><p className="ed-settings-val">{currentUser.name}</p></div></div>
                     <div className="ed-settings-row"><div><p className="ed-settings-lbl">Email</p><p className="ed-settings-val">{currentUser.email}</p></div></div>
                     <div className="ed-settings-row"><div><p className="ed-settings-lbl">Company</p><p className="ed-settings-val">{currentUser.company || 'Not set'}</p></div></div>
+                    <div className="ed-settings-row"><div><p className="ed-settings-lbl">Company Website</p><p className="ed-settings-val">{currentUser.companyWebsite || currentUser.website || 'Not specified'}</p></div></div>
                     <div className="ed-settings-row"><div><p className="ed-settings-lbl">Account Type</p><p className="ed-settings-val">Employer</p></div></div>
                   </div>
                   <div className="ed-settings-card">
