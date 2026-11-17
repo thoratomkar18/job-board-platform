@@ -8,7 +8,23 @@ const net = require('net');
 const path = require('path');
 const fs = require('fs');
 
-const MONGOD_PATH = process.env.MONGOD_PATH || 'C:\\Program Files\\MongoDB\\Server\\8.2\\bin\\mongod.exe';
+function resolveMongodPath() {
+  if (process.env.MONGOD_PATH && fs.existsSync(process.env.MONGOD_PATH)) {
+    return process.env.MONGOD_PATH;
+  }
+  const defaultPaths = [
+    'C:\\Program Files\\MongoDB\\Server\\8.2\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\8.0\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\7.0\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\6.0\\bin\\mongod.exe',
+    'C:\\Program Files\\MongoDB\\Server\\5.0\\bin\\mongod.exe',
+  ];
+  for (const p of defaultPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
 const DB_PATH = path.join(__dirname, 'server', 'data', 'db');
 
 function isPortOpen(port) {
@@ -48,14 +64,28 @@ async function main() {
   console.log(' 🚀 Starting JobConnect Full-Stack Ecosystem');
   console.log('====================================================');
 
+  // 0. Ensure environment configuration & data directories exist
+  const envPath = path.join(__dirname, 'server', '.env');
+  const envExamplePath = path.join(__dirname, 'server', '.env.example');
+  if (!fs.existsSync(envPath) && fs.existsSync(envExamplePath)) {
+    fs.copyFileSync(envExamplePath, envPath);
+    console.log(' [Config] Auto-created server/.env from server/.env.example ✅');
+  }
+
+  if (!fs.existsSync(DB_PATH)) {
+    fs.mkdirSync(DB_PATH, { recursive: true });
+    console.log(' [Config] Ensured database directory exists at server/data/db ✅');
+  }
+
   // 1. Check or Start MongoDB (Port 27017)
   const mongoRunning = await isPortOpen(27017);
   if (mongoRunning) {
     console.log(' [Database] MongoDB is already active on port 27017 ✅');
   } else {
-    if (fs.existsSync(MONGOD_PATH)) {
-      console.log(' [Database] Launching MongoDB on port 27017...');
-      const mongoProc = spawn(MONGOD_PATH, ['--dbpath', DB_PATH, '--port', '27017'], {
+    const mongodExe = resolveMongodPath();
+    if (mongodExe) {
+      console.log(` [Database] Launching MongoDB (${mongodExe}) on port 27017...`);
+      const mongoProc = spawn(mongodExe, ['--dbpath', DB_PATH, '--port', '27017'], {
         stdio: 'ignore'
       });
       processes.push(mongoProc);
@@ -65,7 +95,7 @@ async function main() {
       }
       console.log(' [Database] MongoDB ready ✅');
     } else {
-      console.log(` [Database Warning] mongod.exe not found at ${MONGOD_PATH}. Set MONGOD_PATH or start MongoDB manually. Backend will retry connecting.`);
+      console.log(' [Database Notice] MongoDB executable not detected in standard paths. If using MongoDB as a Windows service or Docker, ensure it is listening on port 27017. Backend will attempt connection.');
     }
   }
 
