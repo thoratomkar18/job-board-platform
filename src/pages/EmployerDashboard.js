@@ -80,11 +80,11 @@ const ApplicationCard = ({
       const notifMap = {
         shortlisted: {
           title: '⭐ Application Shortlisted!',
-          message: `Great news! You have been shortlisted for ${app.jobTitle} at ${app.companyName || currentUser?.company || 'the hiring company'}.`,
+          message: `Great news! You have been shortlisted for ${app.jobTitle} at ${app.companyName || 'the hiring company'}.`,
         },
         selected: {
           title: '🎉 Selected for the Role!',
-          message: `Congratulations! You have been selected for the position of ${app.jobTitle} at ${app.companyName || currentUser?.company || 'the hiring company'}!`,
+          message: `Congratulations! You have been selected for the position of ${app.jobTitle} at ${app.companyName || 'the hiring company'}!`,
         },
         rejected: {
           title: 'Application Status Update',

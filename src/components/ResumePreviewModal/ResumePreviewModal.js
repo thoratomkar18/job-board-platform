@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Download, ExternalLink, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateCandidatePdf, dataUrlToBlobUrl, openResumeInNewTab } from '../../lib/resumePdf';
+import { dataUrlToBlobUrl, openResumeInNewTab } from '../../lib/resumePdf';
 import api from '../../api/axios';
 import './ResumePreviewModal.css';
 
